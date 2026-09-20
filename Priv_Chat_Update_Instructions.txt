@@ -1,0 +1,109 @@
+PRIV CHAT - HOW TO UPDATE THE LIVE WEBSITE
+==============================================
+
+Your project folder:
+C:\Users\paulb\Downloads\priv chat
+
+IMPORTANT:
+Changing/saving a file on your PC does NOT update Render by itself.
+
+To update the live Render website:
+
+1. Open PowerShell.
+
+2. Go to your project:
+cd "$env:USERPROFILE\Downloads\priv chat"
+
+3. Save your code changes in Notepad/VS Code.
+
+4. Run:
+git add .
+
+5. Commit the changes:
+git commit -m "Update Priv Chat"
+
+6. Push to GitHub:
+git push origin main
+
+7. Render will detect the GitHub change and automatically redeploy.
+
+8. Wait for Render to finish deploying.
+
+9. Refresh the live website:
+https://priv-chat-5fwf.onrender.com
+
+Use Ctrl + F5 for a full refresh.
+
+----------------------------------------------
+QUICK VERSION
+----------------------------------------------
+
+cd "$env:USERPROFILE\Downloads\priv chat"
+git add .
+git commit -m "Update Priv Chat"
+git push origin main
+
+----------------------------------------------
+IMPORTANT FILES
+----------------------------------------------
+
+index.html
+- The website/chat screen.
+- Change this for the design, buttons, chat layout, etc.
+
+server.js
+- The chat server/backend.
+- Change this for server features and database behaviour.
+
+package.json
+- Lists the Node.js packages and start command.
+
+.gitignore
+- Keeps private/local files such as users.json and messages.json out of GitHub.
+
+----------------------------------------------
+LIVE ADDRESSES
+----------------------------------------------
+
+Chat website:
+https://priv-chat-5fwf.onrender.com
+
+Backend health check:
+https://priv-chat1-1.onrender.com/health
+
+GitHub:
+https://github.com/alfiebrock774-art/priv-chat1
+
+----------------------------------------------
+IF SOMETHING GOES WRONG
+----------------------------------------------
+
+If git push says there is nothing to commit:
+- Your changes may already be on GitHub.
+
+If Render has not updated:
+- Open Render and check the latest deployment.
+- Wait for the deployment to finish.
+- Then press Ctrl + F5 on the website.
+
+If you accidentally change something:
+- Do not delete random project files.
+- Ask for help before changing server.js, package.json, or .gitignore.
+
+----------------------------------------------
+REMEMBER
+----------------------------------------------
+
+SAVE CODE
+   ↓
+git add .
+   ↓
+git commit
+   ↓
+git push origin main
+   ↓
+GitHub updates
+   ↓
+Render redeploys
+   ↓
+Live Priv Chat updates

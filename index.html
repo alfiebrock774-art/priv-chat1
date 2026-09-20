@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Priv Chat</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#111827;color:#fff}.hidden{display:none!important}
+.auth{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#111827,#1e1b4b)}
+.authBox{width:380px;max-width:92%;padding:30px;background:#1f2937;border-radius:18px;box-shadow:0 20px 60px #0008}.authBox h1{text-align:center}.authBox p{text-align:center;color:#9ca3af}
+input,button{font:inherit}.authBox input,.search,.sendInput{width:100%;padding:13px;margin-top:10px;border:0;border-radius:8px;background:#374151;color:#fff;outline:0}
+button{border:0;border-radius:8px;cursor:pointer}.primary{background:#5865f2;color:#fff;font-weight:bold}.authBox .primary{width:100%;padding:13px;margin-top:12px}
+.switch{text-align:center;margin-top:18px;color:#9ca3af;cursor:pointer}.authMessage{text-align:center;min-height:22px;margin-top:12px;color:#f87171}
+.app{height:100vh;display:flex}.sidebar{width:280px;background:#1f2937;border-right:1px solid #374151;padding:18px;overflow:auto}.logo{font-size:24px;font-weight:bold;margin-bottom:15px}
+.user,.group{display:flex;align-items:center;gap:10px;padding:10px;border-radius:9px;cursor:pointer;margin-bottom:4px}.user:hover,.group:hover,.selected{background:#374151}.avatar{width:40px;height:40px;min-width:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#5865f2;font-weight:bold}.info{flex:1;min-width:0}.name{font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.status{font-size:12px;color:#22c55e}.badge{background:#ef4444;border-radius:20px;padding:3px 8px;font-size:12px}
+.sectionTitle{margin:18px 4px 7px;color:#9ca3af;font-size:12px;text-transform:uppercase}.groupSection{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:18px}.groupSection .sectionTitle{margin:0}.groupAdd{padding:5px 9px!important;margin:0!important;background:#5865f2!important}.groupEmpty{padding:12px 8px;color:#9ca3af;font-size:13px;border:1px dashed #4b5563;border-radius:9px;text-align:center;margin-bottom:8px}.group{background:#252f3f}.memberRow{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px}.memberRow:hover{background:#374151}.memberRow input{width:18px;height:18px;margin:0}.sidebar button.small{width:100%;padding:9px;margin-top:8px;background:#374151;color:#fff}.logout{width:100%;padding:10px;margin-top:15px;background:#ef4444;color:#fff}
+.chat{flex:1;display:flex;flex-direction:column;min-width:0}.chatHeader{height:70px;padding:0 20px;display:flex;align-items:center;background:#1f2937;border-bottom:1px solid #374151;font-size:20px;font-weight:bold}.typing{font-size:12px;color:#9ca3af;margin-left:auto}
+.messages{flex:1;overflow-y:auto;padding:20px}.empty{text-align:center;color:#9ca3af;margin-top:100px}.message{margin-bottom:16px;max-width:75%}.mine{margin-left:auto;text-align:right}.bubble{display:inline-block;padding:10px 14px;border-radius:13px;background:#374151;word-break:break-word}.mine .bubble{background:#5865f2}.meta{color:#9ca3af;font-size:11px;margin-top:3px}.tools{margin-top:3px}.tool{background:transparent;color:#9ca3af;padding:2px 5px}.tool:hover{color:#fff}.reactions{margin-top:5px}.reaction{background:#1f2937;color:#fff;border:1px solid #4b5563;padding:3px 7px;border-radius:20px;margin:2px}
+.sendArea{display:flex;gap:8px;padding:15px;background:#1f2937}.sendInput{margin:0;flex:1}.sendButton{padding:0 20px;background:#5865f2;color:#fff;font-weight:bold}.emojiButton{width:45px;background:#374151;color:#fff;font-size:20px}.emojiPanel{position:absolute;bottom:75px;left:300px;display:none;width:240px;padding:12px;background:#1f2937;border:1px solid #374151;border-radius:12px}.emojiPanel button{background:transparent;font-size:22px;padding:5px}
+.modal{position:fixed;inset:0;background:#0009;display:flex;align-items:center;justify-content:center}.modalBox{width:420px;max-width:92%;background:#1f2937;padding:22px;border-radius:15px}.modalBox input{width:100%;padding:12px;background:#374151;color:#fff;border:0;border-radius:8px;margin:8px 0}.memberList{max-height:200px;overflow:auto}.memberRow{padding:7px}.modalActions{display:flex;gap:8px;margin-top:12px}.modalActions button{padding:10px;flex:1}
+@media(max-width:700px){.sidebar{width:85px;padding:8px}.logo{font-size:13px}.info,.sectionTitle,.sidebar button.small,.logout{font-size:0}.search{font-size:10px}.user,.group{justify-content:center}.message{max-width:88%}.emojiPanel{left:90px}}
+.message{max-width:88%}
+.emojiPanel{left:90px}
+
+/* FIX CHAT LAYOUT */
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+.chat {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.messages {
+    width: 100%;
+    min-width: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.message {
+    max-width: 75%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.message.mine {
+    margin-left: auto;
+}
+
+.chatInput {
+    width: 100%;
+    min-width: 0;
+}
+
+.chatInput input {
+    min-width: 0;
+    width: 100%;
+}
+
+
+/* GROUP BATTLE GAME */
+.gameButton{margin-left:12px;padding:9px 13px;background:#5865f2;color:#fff;font-weight:bold;white-space:nowrap}
+.gameBox{width:680px;max-width:94%;max-height:92%;overflow:auto;background:#1f2937;padding:20px;border-radius:18px}
+.gameTop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.gameTop h2{margin:0 0 4px}.gameSub{color:#9ca3af;font-size:13px}.gameClose{background:#374151;color:#fff;padding:8px 11px}
+.gameStats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}.gameStats div{background:#111827;border:1px solid #374151;border-radius:10px;padding:10px;text-align:center}.gameStats span{display:block;color:#9ca3af;font-size:12px}.gameStats strong{font-size:24px}
+.gameArena{position:relative;min-height:320px;border-radius:14px;background:radial-gradient(circle at 30% 20%,#243b53,#111827 70%);border:1px solid #374151;overflow:hidden;touch-action:manipulation}
+.gameHint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#9ca3af;padding:25px}
+.target{position:absolute;width:64px;height:64px;border-radius:50%;border:4px solid #fff;background:#ef4444;color:#fff;font-size:28px;cursor:pointer;box-shadow:0 6px 18px #0008;touch-action:manipulation}
+.target:active{transform:scale(.9)}
+.gameActions{display:flex;gap:8px;margin-top:12px}.gameAction{padding:11px 16px}
+.leaderboard{margin-top:16px}.leaderboard h3{margin:0 0 8px}.scoreRow{display:flex;justify-content:space-between;padding:8px 10px;background:#111827;border-radius:8px;margin-top:5px}.scoreRow.me{outline:1px solid #5865f2}
+@media(max-width:700px){.gameButton{margin-left:6px;padding:8px}.gameBox{padding:14px}.gameArena{min-height:260px}.target{width:58px;height:58px}.gameStats strong{font-size:20px}}
+</style>
+</head>
+<body>
+
+<div class="auth" id="auth">
+  <div class="authBox">
+    <h1>💬 Priv Chat</h1>
+    <p id="authTitle">Log in to your account</p>
+    <input id="usernameInput" placeholder="Username" maxlength="20">
+    <input id="passwordInput" type="password" placeholder="Password">
+    <button class="primary" onclick="authenticate()" id="authButton">Log In</button>
+    <div class="switch" onclick="switchAuth()" id="switchText">Create a new account</div>
+    <div class="authMessage" id="authMessage"></div>
+  </div>
+</div>
+
+<div class="app hidden" id="app">
+  <aside class="sidebar">
+    <div class="logo">💬 Priv Chat</div>
+    <input class="search" id="searchInput" placeholder="Search..." oninput="renderLists()">
+    <div class="groupSection"><div class="sectionTitle">Groups</div><button class="small groupAdd" onclick="openGroupModal()" title="Create group">＋</button></div>
+    <div id="groups"></div>
+    <div class="sectionTitle">Online Users</div>
+    <div id="users"></div>
+    <button class="logout" onclick="logout()">Log Out</button>
+  </aside>
+
+  <main class="chat">
+    <div class="chatHeader">
+      <span id="chatHeader">Select a chat</span>
+      <span class="typing" id="typing"></span>
+      <button id="gameButton" class="gameButton hidden" onclick="openGame()">🎮 Game</button>
+    </div>
+    <div class="messages" id="messages"><div class="empty">Select someone to start chatting 💬</div></div>
+    <div class="emojiPanel" id="emojiPanel">
+      <button onclick="addEmoji('😀')">😀</button><button onclick="addEmoji('😂')">😂</button><button onclick="addEmoji('😍')">😍</button>
+      <button onclick="addEmoji('😎')">😎</button><button onclick="addEmoji('😭')">😭</button><button onclick="addEmoji('👍')">👍</button>
+      <button onclick="addEmoji('❤️')">❤️</button><button onclick="addEmoji('🔥')">🔥</button><button onclick="addEmoji('🎉')">🎉</button>
+      <button onclick="addEmoji('💀')">💀</button><button onclick="addEmoji('👀')">👀</button>
+    </div>
+    <div class="sendArea">
+      <button class="emojiButton" onclick="toggleEmoji()">😀</button>
+      <input class="sendInput" id="messageInput" placeholder="Type a message..." onkeydown="handleKey(event)" oninput="typingChanged()">
+      <button class="sendButton" onclick="sendMessage()">Send</button>
+    </div>
+  </main>
+</div>
+
+<div class="modal hidden" id="gameModal">
+  <div class="gameBox">
+    <div class="gameTop">
+      <div>
+        <h2>🎮 Group Battle</h2>
+        <div class="gameSub" id="gameStatus">30-second target battle</div>
+      </div>
+      <button class="gameClose" onclick="closeGame()">✕</button>
+    </div>
+    <div class="gameStats">
+      <div><span>Time</span><strong id="gameTime">30</strong></div>
+      <div><span>Your score</span><strong id="gameScore">0</strong></div>
+      <div><span>Players</span><strong id="gamePlayers">0</strong></div>
+    </div>
+    <div class="gameArena" id="gameArena">
+      <div class="gameHint" id="gameHint">Join the game, then wait for the host to start.</div>
+      <button class="target hidden" id="gameTarget" type="button">🎯</button>
+    </div>
+    <div class="gameActions">
+      <button id="joinGameButton" class="primary gameAction" onclick="joinGame()">Join Game</button>
+      <button id="startGameButton" class="primary gameAction hidden" onclick="startGame()">Start Round</button>
+    </div>
+    <div class="leaderboard">
+      <h3>🏆 Leaderboard</h3>
+      <div id="gameLeaderboard">No players yet.</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="groupModal">
+  <div class="modalBox">
+    <h2>Create Group</h2>
+    <input id="groupName" placeholder="Group name" maxlength="40">
+    <div class="memberList" id="memberList"></div>
+    <div class="modalActions">
+      <button onclick="closeGroupModal()">Cancel</button>
+      <button class="primary" onclick="createGroup()">Create</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let socket=null,myUsername="",onlineUsers=[],groups=[],messages=[],selected=null,typingTimer=null,authRegister=false,gameState=null,gameTimer=null;
+
+const wsUrl=(location.protocol==="https:"?"wss://":"ws://")+"priv-chat1-1.onrender.com";
+
+function switchAuth(){
+  authRegister=!authRegister;
+  document.getElementById("authTitle").textContent=authRegister?"Create your account":"Log in to your account";
+  document.getElementById("authButton").textContent=authRegister?"Create Account":"Log In";
+  document.getElementById("switchText").textContent=authRegister?"Already have an account? Log in":"Create a new account";
+  document.getElementById("authMessage").textContent="";
+}
+function connect(){
+  return new Promise((resolve,reject)=>{
+    socket=new WebSocket(wsUrl);
+    socket.onopen=resolve;
+    socket.onerror=reject;
+    socket.onmessage=e=>handle(JSON.parse(e.data));
+    socket.onclose=()=>{};
+  });
+}
+async function authenticate(){
+  const u=usernameInput.value.trim(),p=passwordInput.value;
+  if(!u||!p)return setAuth("Enter a username and password.");
+  setAuth("Connecting...","#9ca3af");
+  try{await connect()}catch{return setAuth("Chat server is unavailable.");}
+  socket.send(JSON.stringify({type:authRegister?"register":"login",username:u,password:p}));
+}
+function setAuth(t,c="#f87171"){authMessage.textContent=t;authMessage.style.color=c}
+function handle(d){
+  if(d.type==="registerSuccess"){setAuth("Account created! Log in now.","#22c55e");authRegister=false;switchAuth();return}
+  if(d.type==="loginSuccess"){
+    myUsername=d.username;auth.classList.add("hidden");app.classList.remove("hidden");return;
+  }
+  if(d.type==="userList"){onlineUsers=d.users.filter(x=>x!==myUsername);renderLists();return}
+  if(d.type==="history"){messages=d.messages||[];groups=d.groups||[];renderLists();renderMessages();return}
+  if(d.type==="groupCreated"){if(!groups.some(g=>g.id===d.group.id))groups.push(d.group);renderLists();if(d.group.owner===myUsername){openGroup(d.group)}return}
+  if(d.type==="privateMessage"||d.type==="groupMessage"){messages.push(d);renderLists();renderMessages();if(d.from!==myUsername)notify(d.from);return}
+  if(d.type==="messageEdited"){let m=messages.find(x=>x.id===d.id);if(m){m.message=d.message;m.edited=true}renderMessages();return}
+  if(d.type==="messageDeleted"){messages=messages.filter(x=>x.id!==d.id);renderMessages();return}
+  if(d.type==="reactionUpdate"){let m=messages.find(x=>x.id===d.id);if(m)m.reactions=d.reactions||[];renderMessages();return}
+  if(d.type==="typing"){
+    if((selected?.groupId&&selected.groupId===d.groupId)||(selected?.user===d.from&&!selected.groupId))document.getElementById("typing").textContent=d.value?d.from+" is typing...":"";
+    return;
+  }
+  if(d.type==="read"){let m=messages.find(x=>x.id===d.id);if(m)m.readBy=[...(m.readBy||[]),d.by];renderMessages();return}
+  if(d.type==="gameState"){gameState=d;updateGameUI();return}
+  if(d.type==="gameStarted"||d.type==="gameUpdate"||d.type==="gameEnded"){gameState=d;updateGameUI();return}
+  if(d.type==="error")setAuth(d.message);
+}
+function renderLists(){
+  const q=searchInput.value.toLowerCase();
+  users.innerHTML="";groupsEl.innerHTML="";
+  const visibleGroups=groups.filter(g=>g.name.toLowerCase().includes(q));
+  if(!visibleGroups.length){groupsEl.innerHTML=`<div class="groupEmpty">${q?"No groups found":"No groups yet. Create one above!"}</div>`;}
+  visibleGroups.forEach(g=>{
+    const el=document.createElement("div");el.className="group "+(selected?.groupId===g.id?"selected":"");
+    el.innerHTML=`<div class="avatar">👥</div><div class="info"><div class="name">${esc(g.name)}</div><div class="status">Group</div></div>`;
+    el.onclick=()=>openGroup(g);groupsEl.appendChild(el);
+  });
+  onlineUsers.filter(u=>u.toLowerCase().includes(q)).forEach(u=>{
+    const el=document.createElement("div");el.className="user "+(selected?.user===u?"selected":"");
+    el.innerHTML=`<div class="avatar">${esc(u[0].toUpperCase())}</div><div class="info"><div class="name">${esc(u)}</div><div class="status">● Online</div></div>`;
+    el.onclick=()=>openUser(u);users.appendChild(el);
+  });
+}
+const groupsEl=document.getElementById("groups");
+function openUser(u){selected={user:u};chatHeader.textContent="💬 "+u;typing.textContent="";gameButton.classList.add("hidden");closeGame();renderLists();renderMessages();messageInput.focus()}
+function openGroup(g){selected={groupId:g.id,groupName:g.name};chatHeader.textContent="👥 "+g.name;typing.textContent="";gameButton.classList.remove("hidden");renderLists();renderMessages();messageInput.focus()}
+function currentMessages(){return messages.filter(m=>selected&&(selected.groupId?m.groupId===selected.groupId:!m.groupId&&((m.from===myUsername&&m.to===selected.user)||(m.from===selected.user&&m.to===myUsername))))}
+function renderMessages(){
+  if(!selected){messagesEl.innerHTML='<div class="empty">Select someone to chat 💬</div>';return}
+  const chat=currentMessages();messagesEl.innerHTML="";
+  if(!chat.length){messagesEl.innerHTML='<div class="empty">No messages yet. Say hello! 👋</div>';return}
+  chat.forEach(m=>{
+    const el=document.createElement("div");el.className="message "+(m.from===myUsername?"mine":"");
+    const reactions=(m.reactions||[]).map(r=>`<button class="reaction" onclick="react('${m.id}','${r.emoji}')">${r.emoji}</button>`).join("");
+    const read=m.from===myUsername&&!m.groupId&&m.readBy?.includes(selected.user)?" • Read":"";
+    el.innerHTML=`<div class="bubble">${esc(m.message)}</div>
+      <div class="meta">${m.groupId?esc(m.from)+" • ":""}${new Date(m.time).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}${m.edited?" • edited":""}${read}</div>
+      <div class="reactions">${reactions}<button class="reaction" onclick="react('${m.id}','👍')">＋</button></div>
+      ${m.from===myUsername?`<div class="tools"><button class="tool" onclick="editMsg('${m.id}')">Edit</button><button class="tool" onclick="deleteMsg('${m.id}')">Delete</button></div>`:""}`;
+    messagesEl.appendChild(el);
+    if(m.from!==myUsername&&!m.groupId)socket.send(JSON.stringify({type:"read",id:m.id}));
+  });
+  messagesEl.scrollTop=messagesEl.scrollHeight;
+}
+const messagesEl=document.getElementById("messages");
+gameTarget.addEventListener("click",hitTarget);
+function sendMessage(){
+  const text=messageInput.value.trim();if(!text||!selected)return;
+  socket.send(JSON.stringify(selected.groupId?{type:"groupMessage",groupId:selected.groupId,message:text}:{type:"privateMessage",to:selected.user,message:text}));
+  messageInput.value="";typingChanged();
+}
+function handleKey(e){if(e.key==="Enter"){e.preventDefault();sendMessage()}}
+function typingChanged(){
+  if(!selected)return;
+  clearTimeout(typingTimer);
+  socket.send(JSON.stringify(selected.groupId?{type:"typing",groupId:selected.groupId,value:true}:{type:"typing",target:selected.user,value:true}));
+  typingTimer=setTimeout(()=>socket.send(JSON.stringify(selected.groupId?{type:"typing",groupId:selected.groupId,value:false}:{type:"typing",target:selected.user,value:false})),900);
+}
+function editMsg(id){
+  const m=messages.find(x=>x.id===id),t=prompt("Edit message:",m?.message||"");if(!t?.trim())return;
+  socket.send(JSON.stringify({type:"editMessage",id,message:t.trim()}));
+}
+function deleteMsg(id){if(confirm("Delete this message?"))socket.send(JSON.stringify({type:"deleteMessage",id}))}
+function react(id,emoji){socket.send(JSON.stringify({type:"react",id,emoji}))}
+function toggleEmoji(){emojiPanel.style.display=emojiPanel.style.display==="block"?"none":"block"}
+function addEmoji(e){messageInput.value+=e;messageInput.focus();emojiPanel.style.display="none"}
+function openGroupModal(){
+  groupName.value="";
+  memberList.innerHTML="";
+  if(!onlineUsers.length){
+    memberList.innerHTML=`<div class="groupEmpty">You are the only user online. You can still create the group and add people later.</div>`;
+  }else{
+    onlineUsers.forEach(u=>{memberList.insertAdjacentHTML("beforeend",`<label class="memberRow"><input type="checkbox" value="${esc(u)}"> <span>👤 ${esc(u)}</span></label>`)});
+  }
+  groupModal.classList.remove("hidden");
+  setTimeout(()=>groupName.focus(),50);
+}
+function closeGroupModal(){groupModal.classList.add("hidden")}
+function createGroup(){
+  const name=groupName.value.trim();
+  const members=[...memberList.querySelectorAll("input:checked")].map(x=>x.value);
+  if(!name){groupName.focus();return;}
+  if(!socket||socket.readyState!==WebSocket.OPEN){alert("Chat connection is not ready. Please refresh and try again.");return;}
+  socket.send(JSON.stringify({type:"createGroup",name,members}));
+  closeGroupModal();
+}
+
+function openGame(){
+  if(!selected?.groupId)return;
+  gameModal.classList.remove("hidden");
+  socket.send(JSON.stringify({type:"gameState",groupId:selected.groupId}));
+}
+function closeGame(){gameModal.classList.add("hidden");clearInterval(gameTimer);gameTimer=null}
+function joinGame(){
+  if(!selected?.groupId)return;
+  socket.send(JSON.stringify({type:"gameJoin",groupId:selected.groupId}));
+}
+function startGame(){
+  if(!selected?.groupId)return;
+  socket.send(JSON.stringify({type:"gameStart",groupId:selected.groupId}));
+}
+function hitTarget(){
+  if(!gameState?.active||!selected?.groupId)return;
+  socket.send(JSON.stringify({type:"gameHit",groupId:selected.groupId,targetId:gameState.targetId}));
+}
+function updateGameUI(){
+  if(!gameState)return;
+  const sameGroup=selected?.groupId===gameState.groupId;
+  if(!sameGroup)return;
+  const players=gameState.players||[];
+  const me=players.find(p=>p.username===myUsername);
+  gameTime.textContent=Math.max(0,Number(gameState.timeLeft||0));
+  gameScore.textContent=me?.score||0;
+  gamePlayers.textContent=players.length;
+  gameStatus.textContent=gameState.active?"Round in progress! Hit the target!":(gameState.ended?"Round finished":"Join the game, then start the round.");
+  gameHint.textContent=gameState.active?"":"Waiting for the round to start...";
+  gameHint.classList.toggle("hidden",!!gameState.active);
+  gameTarget.classList.toggle("hidden",!gameState.active);
+  if(gameState.active&&gameState.target){
+    gameTarget.style.left=`${Math.max(2,Math.min(94,gameState.target.x))}%`;
+    gameTarget.style.top=`${Math.max(2,Math.min(82,gameState.target.y))}%`;
+  }
+  const joined=players.some(p=>p.username===myUsername);
+  joinGameButton.classList.toggle("hidden",joined);
+  startGameButton.classList.toggle("hidden",!(joined&&gameState.host===myUsername&&!gameState.active));
+  gameLeaderboard.innerHTML=players.length?players.slice().sort((a,b)=>b.score-a.score).map((p,i)=>`<div class="scoreRow ${p.username===myUsername?"me":""}"><span>${i+1}. ${esc(p.username)}</span><strong>${p.score}</strong></div>`).join(""):"No players yet.";
+  clearInterval(gameTimer);
+  if(gameState.active){
+    let endAt=Date.now()+Math.max(0,Number(gameState.timeLeft||0))*1000;
+    gameTimer=setInterval(()=>{
+      const left=Math.max(0,Math.ceil((endAt-Date.now())/1000));
+      gameTime.textContent=left;
+      if(left<=0)clearInterval(gameTimer);
+    },200);
+  }
+}
+function notify(u){if("Notification"in window&&Notification.permission==="granted")new Notification("Priv Chat",{body:"New message from "+u});else if("Notification"in window&&Notification.permission!=="denied")Notification.requestPermission()}
+function logout(){socket?.close();location.reload()}
+function esc(t){const d=document.createElement("div");d.textContent=t??"";return d.innerHTML}
+</script>
+</body>
+</html>
