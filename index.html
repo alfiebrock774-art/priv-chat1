@@ -79,6 +79,9 @@ html, body {
 .gameActions{display:flex;gap:8px;margin-top:12px}.gameAction{padding:11px 16px}
 .leaderboard{margin-top:16px}.leaderboard h3{margin:0 0 8px}.scoreRow{display:flex;justify-content:space-between;padding:8px 10px;background:#111827;border-radius:8px;margin-top:5px}.scoreRow.me{outline:1px solid #5865f2}
 @media(max-width:700px){.gameButton{margin-left:6px;padding:8px}.gameBox{padding:14px}.gameArena{min-height:260px}.target{width:58px;height:58px}.gameStats strong{font-size:20px}}
+
+/* CALLING */
+.callActions{margin-left:auto;display:flex;gap:6px}.callBtn{padding:8px 10px;background:#374151;color:#fff;border-radius:8px}.callModal{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;z-index:50}.callBox{width:760px;max-width:94%;background:#1f2937;border-radius:18px;padding:18px}.callVideos{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.callVideos video{width:100%;height:300px;background:#111827;border-radius:12px;object-fit:cover}.callStatus{color:#9ca3af;text-align:center;min-height:22px}.callControls{display:flex;justify-content:center;gap:8px}.callControls button{padding:10px 14px;background:#374151;color:#fff}.callControls .danger{background:#ef4444}@media(max-width:700px){.callVideos{grid-template-columns:1fr}.callVideos video{height:220px}}
 </style>
 </head>
 <body>
@@ -109,8 +112,7 @@ html, body {
   <main class="chat">
     <div class="chatHeader">
       <span id="chatHeader">Select a chat</span>
-      <span class="typing" id="typing"></span>
-      <button id="gameButton" class="gameButton hidden" onclick="openGame()">🎮 Game</button>
+      <span class="typing" id="typing"></span><div class="callActions" id="callActions" hidden><button class="callBtn" onclick="startCall(false)">📞</button><button class="callBtn" onclick="startCall(true)">🎥</button></div><button id="gameButton" class="gameButton hidden" onclick="openGame()">🎮 Game</button>
     </div>
     <div class="messages" id="messages"><div class="empty">Select someone to start chatting 💬</div></div>
     <div class="emojiPanel" id="emojiPanel">
@@ -168,8 +170,10 @@ html, body {
   </div>
 </div>
 
+<div class="callModal hidden" id="callModal"><div class="callBox"><h2 id="callTitle" style="margin-top:0;text-align:center">📞 Call</h2><div class="callStatus" id="callStatus">Connecting...</div><div class="callVideos"><video id="localVideo" autoplay muted playsinline></video><video id="remoteVideo" autoplay playsinline></video></div><div class="callControls"><button id="muteCallButton" onclick="toggleMute()">🔇 Mute</button><button id="cameraCallButton" onclick="toggleCamera()">📹 Camera</button><button class="danger" onclick="endCall()">📵 End</button></div></div></div>
 <script>
 let socket=null,myUsername="",onlineUsers=[],groups=[],messages=[],selected=null,typingTimer=null,authRegister=false,gameState=null,gameTimer=null;
+let peer=null,localStream=null,callTarget=null,callWithVideo=false,iceQueue=[];
 
 const wsUrl=(location.protocol==="https:"?"wss://":"ws://")+"priv-chat1-1.onrender.com";
 
@@ -214,6 +218,12 @@ function handle(d){
     return;
   }
   if(d.type==="read"){let m=messages.find(x=>x.id===d.id);if(m)m.readBy=[...(m.readBy||[]),d.by];renderMessages();return}
+  if(d.type==="callIncoming"){receiveIncomingCall(d);return}
+  if(d.type==="callOffer"){receiveOffer(d);return}
+  if(d.type==="callAnswer"){receiveAnswer(d);return}
+  if(d.type==="callIce"){receiveIce(d);return}
+  if(d.type==="callHangup"){remoteHangup();return}
+  if(d.type==="callReject"){remoteReject();return}
   if(d.type==="gameState"){gameState=d;updateGameUI();return}
   if(d.type==="gameStarted"||d.type==="gameUpdate"||d.type==="gameEnded"){gameState=d;updateGameUI();return}
   if(d.type==="error")setAuth(d.message);
@@ -235,8 +245,8 @@ function renderLists(){
   });
 }
 const groupsEl=document.getElementById("groups");
-function openUser(u){selected={user:u};chatHeader.textContent="💬 "+u;typing.textContent="";gameButton.classList.add("hidden");closeGame();renderLists();renderMessages();messageInput.focus()}
-function openGroup(g){selected={groupId:g.id,groupName:g.name};chatHeader.textContent="👥 "+g.name;typing.textContent="";gameButton.classList.remove("hidden");renderLists();renderMessages();messageInput.focus()}
+function openUser(u){selected={user:u};chatHeader.textContent="💬 "+u;typing.textContent="";gameButton.classList.add("hidden");callActions.hidden=false;closeGame();renderLists();renderMessages();messageInput.focus()}
+function openGroup(g){selected={groupId:g.id,groupName:g.name};chatHeader.textContent="👥 "+g.name;typing.textContent="";gameButton.classList.remove("hidden");callActions.hidden=true;renderLists();renderMessages();messageInput.focus()}
 function currentMessages(){return messages.filter(m=>selected&&(selected.groupId?m.groupId===selected.groupId:!m.groupId&&((m.from===myUsername&&m.to===selected.user)||(m.from===selected.user&&m.to===myUsername))))}
 function renderMessages(){
   if(!selected){messagesEl.innerHTML='<div class="empty">Select someone to chat 💬</div>';return}
@@ -297,6 +307,20 @@ function createGroup(){
   socket.send(JSON.stringify({type:"createGroup",name,members}));
   closeGroupModal();
 }
+
+async function startCall(video){if(!selected?.user||!socket||socket.readyState!==WebSocket.OPEN)return;if(peer)endCall(false);callTarget=selected.user;callWithVideo=video;iceQueue=[];try{localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:video})}catch(e){alert("Camera/microphone permission is required for calls.");return}showCallUI((video?"🎥 ":"📞 ")+"Calling "+callTarget+"…");peer=createPeer();const offer=await peer.createOffer();await peer.setLocalDescription(offer);socket.send(JSON.stringify({type:"callOffer",to:callTarget,offer:peer.localDescription,video}))}
+function createPeer(){const pc=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});localStream?.getTracks().forEach(t=>pc.addTrack(t,localStream));pc.ontrack=e=>{if(e.streams[0])remoteVideo.srcObject=e.streams[0]};pc.onicecandidate=e=>{if(e.candidate&&callTarget)socket.send(JSON.stringify({type:"callIce",to:callTarget,candidate:e.candidate}))};pc.onconnectionstatechange=()=>{if(pc.connectionState==="connected")callStatus.textContent="Connected";if(["failed","disconnected"].includes(pc.connectionState))callStatus.textContent="Connection lost"};return pc}
+async function receiveIncomingCall(d){if(peer){socket.send(JSON.stringify({type:"callReject",to:d.from}));return}callTarget=d.from;callWithVideo=!!d.video;iceQueue=[];const accept=confirm(d.from+" is calling you. "+(callWithVideo?"Video":"Voice")+" call — accept?");if(!accept){socket.send(JSON.stringify({type:"callReject",to:callTarget}));callTarget=null;return}try{localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:callWithVideo})}catch(e){socket.send(JSON.stringify({type:"callReject",to:callTarget}));alert("Camera/microphone permission is required for calls.");callTarget=null;return}showCallUI((callWithVideo?"🎥 ":"📞 ")+"Call with "+callTarget);peer=createPeer();if(d.offer){await peer.setRemoteDescription(new RTCSessionDescription(d.offer));for(const c of iceQueue){try{await peer.addIceCandidate(c)}catch{}}iceQueue=[];const answer=await peer.createAnswer();await peer.setLocalDescription(answer);socket.send(JSON.stringify({type:"callAnswer",to:callTarget,answer:peer.localDescription}))}callStatus.textContent="Connecting…"}
+async function receiveOffer(d){if(d.to!==myUsername)return;if(!peer)return;await peer.setRemoteDescription(new RTCSessionDescription(d.offer));for(const c of iceQueue){try{await peer.addIceCandidate(c)}catch{}}iceQueue=[];const answer=await peer.createAnswer();await peer.setLocalDescription(answer);socket.send(JSON.stringify({type:"callAnswer",to:callTarget,answer:peer.localDescription}))}
+async function receiveAnswer(d){if(!peer)return;await peer.setRemoteDescription(new RTCSessionDescription(d.answer));for(const c of iceQueue){try{await peer.addIceCandidate(c)}catch{}}iceQueue=[]}
+async function receiveIce(d){if(d.to!==myUsername||!d.candidate)return;if(peer?.remoteDescription){try{await peer.addIceCandidate(d.candidate)}catch{}}else iceQueue.push(d.candidate)}
+function showCallUI(title){callTitle.textContent=title;callStatus.textContent="Connecting…";callModal.classList.remove("hidden");localVideo.srcObject=localStream;remoteVideo.srcObject=null;muteCallButton.textContent="🔇 Mute";cameraCallButton.textContent=callWithVideo?"📹 Camera":"📹 No Camera";cameraCallButton.disabled=!callWithVideo}
+function toggleMute(){const t=localStream?.getAudioTracks()[0];if(!t)return;t.enabled=!t.enabled;muteCallButton.textContent=t.enabled?"🔇 Mute":"🔊 Unmute"}
+function toggleCamera(){const t=localStream?.getVideoTracks()[0];if(!t)return;t.enabled=!t.enabled;cameraCallButton.textContent=t.enabled?"📹 Camera":"🚫 Camera"}
+function endCall(notify=true){if(notify&&callTarget&&socket?.readyState===WebSocket.OPEN)socket.send(JSON.stringify({type:"callHangup",to:callTarget}));cleanupCall()}
+function remoteHangup(){callStatus.textContent="Call ended";setTimeout(cleanupCall,700)}
+function remoteReject(){callStatus.textContent="Call declined";setTimeout(cleanupCall,700)}
+function cleanupCall(){peer?.close();peer=null;localStream?.getTracks().forEach(t=>t.stop());localStream=null;callTarget=null;iceQueue=[];localVideo.srcObject=null;remoteVideo.srcObject=null;callModal.classList.add("hidden")}
 
 function openGame(){
   if(!selected?.groupId)return;

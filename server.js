@@ -294,6 +294,36 @@ wss.on("connection", ws => {
 
       if (!username) return;
 
+      if (data.type === "callOffer") {
+        const to = String(data.to || "").trim();
+        if (!to || !data.offer) return;
+        const exists = await db(`SELECT 1 FROM users WHERE username=$1`, [to]);
+        if (!exists.rowCount) return send(ws, { type:"error", message:"That user does not exist." });
+        send(clients.get(to), { type:"callIncoming", from:username, to, offer:data.offer, video:!!data.video });
+        return;
+      }
+
+      if (data.type === "callAnswer") {
+        const to = String(data.to || "").trim();
+        if (!to || !data.answer) return;
+        send(clients.get(to), { type:"callAnswer", from:username, to, answer:data.answer });
+        return;
+      }
+
+      if (data.type === "callIce") {
+        const to = String(data.to || "").trim();
+        if (!to || !data.candidate) return;
+        send(clients.get(to), { type:"callIce", from:username, to, candidate:data.candidate });
+        return;
+      }
+
+      if (data.type === "callHangup" || data.type === "callReject") {
+        const to = String(data.to || "").trim();
+        if (!to) return;
+        send(clients.get(to), { type:data.type, from:username, to });
+        return;
+      }
+
       if (data.type === "privateMessage") {
         const to = String(data.to || "").trim();
         const text = String(data.message || "").trim();
